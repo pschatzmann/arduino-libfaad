@@ -1,0 +1,3 @@
+[submodule "faad2"]
+	path = original/faad2
+	url = https://github.com/knik0/faad2.gitgit submodule status
