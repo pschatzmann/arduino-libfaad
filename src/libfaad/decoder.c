@@ -68,8 +68,8 @@ static void create_channel_config(NeAACDecStruct *hDecoder,
                                   NeAACDecFrameInfo *hInfo);
 
 
-int NeAACDecGetVersion(char **faad_id_string,
-                                   char **faad_copyright_string)
+int NeAACDecGetVersion(const char **faad_id_string,
+                                   const char **faad_copyright_string)
 {
     static const char *libfaadName = PACKAGE_VERSION;
     static const char *libCopyright =

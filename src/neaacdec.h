@@ -248,8 +248,8 @@ NEAACDECAPI char NeAACDecAudioSpecificConfig(unsigned char *pBuffer,
                                              mp4AudioSpecificConfig *mp4ASC);
 
 /* Get version and copyright strings */
-NEAACDECAPI int NeAACDecGetVersion(char **faad_id_string,
-                                   char **faad_copyright_string);
+NEAACDECAPI int NeAACDecGetVersion(const char **faad_id_string,
+                                   const char **faad_copyright_string);
 
 #ifdef _WIN32
   #pragma pack(pop)
