@@ -1,16 +1,15 @@
-
-Freeware Advanced Audio (AAC) Decoder including SBR decoding
+# Freeware Advanced Audio (AAC) Decoder including SBR decoding
 
 FAAD2 is a HE, LC, MAIN and LTP profile, MPEG2 and MPEG-4 AAC decoder.
 FAAD2 includes code for SBR (HE AAC) decoding.
 FAAD2 is licensed under the GPL.
 
 
-__________
-COPYRIGHTS
+## COPYRIGHTS
 
 For FAAD2 the following license applies:
 
+```
 ******************************************************************************
 ** FAAD2 - Freeware Advanced Audio (AAC) Decoder including SBR decoding
 ** Copyright (C) 2003-2005 M. Bakker, Nero AG, http://www.nero.com
@@ -38,7 +37,7 @@ For FAAD2 the following license applies:
 ** Commercial non-GPL licensing of this software is possible.
 ** For more info contact Nero AG through Mpeg4AAClicense@nero.com.
 ******************************************************************************
-
+```
 
 Please note that the use of this software may require the payment of
 patent royalties. You need to consider this issue before you start
@@ -47,34 +46,28 @@ any way for patent royalities! YOU ARE SOLELY RESPONSIBLE FOR YOUR OWN
 ACTIONS!
 
 
-___________________
-DIRECTORY STRUCTURE
+## Arduino
 
-faad2 - top level directory.
+This project is part of my [Arduino Audio Tools](https://github.com/pschatzmann/arduino-audio-tools). Please read the corresponding [Wiki](https://github.com/pschatzmann/arduino-audio-tools/wiki/Encoding-and-Decoding-of-Audio) how to use it.
 
-   aacDECdrop - windows decoder/player with drag'n'drop functionality.
+### Memory Requirements
 
-   docs - API documentation.
+I was struggling quite a bit with the memory requirements and I could only make it work on an ESP32 with a stack of 40k and by using PSRAM. So to fulfill the stack requirement we need to run the decoder in a separate freertos task.
 
-   frontend - command line frontend to the FAAD2 library, also supports
-              MPEG-4 file decoding.
+Further details can be found in my [related blog](https://www.pschatzmann.ch/home/2023/09/12/arduino-audio-tools-faat-aac-decoder/).
 
-   include - inlude file for the FAAD2 library.
 
-   libfaad - the FAAD2 AAC decoder library including SBR.
 
-      codebook - Huffman codebooks.
+### Installation
 
-   plugins - plugins for all kinds of pograms.
+You can download the library as zip and call include Library -> zip library. Or you can git clone this project into the Arduino libraries folder e.g. with
 
-      mpeg4ip - plugin for the mpeg4ip player.
+```
+cd  ~/Documents/Arduino/libraries
+git clone https://github.com/pschatzmann/arduino-libfaad.git
+```
 
-      QCD - Quintessential player AAC plugin.
+I recommend to use git because you can easily update to the latest version just by executing the ```git pull``` command in the project folder.
 
-      QCDMp4 - Quintessential player MP4 plugin.
 
-      xmms - xmms AAC plugin.
 
-   project/msvc - Visual Studio 2017 project files.
-
-   utils/win32 - generate "win32_ver.h" from "configure.h".
