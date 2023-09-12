@@ -53,8 +53,8 @@
 uint16_t dbg_count;
 #endif
 
-#if !defined(PACKAGE_VERSION)
-#error "PACKAGE_VERSION must be defined"
+#if (defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64) && !defined(PACKAGE_VERSION)
+#include "win32_ver.h"
 #endif
 
 /* static function declarations */
@@ -71,8 +71,8 @@ static void create_channel_config(NeAACDecStruct *hDecoder,
 int NeAACDecGetVersion(const char **faad_id_string,
                                    const char **faad_copyright_string)
 {
-    static const char *libfaadName = PACKAGE_VERSION;
-    static const char *libCopyright =
+    static char *libfaadName = PACKAGE_VERSION;
+    static char *libCopyright =
         " Copyright 2002-2004: Ahead Software AG\n"
 	" http://www.audiocoding.com\n"
 	" bug tracking: https://sourceforge.net/p/faac/bugs/\n";
@@ -148,9 +148,8 @@ NeAACDecHandle NeAACDecOpen(void)
     hDecoder->frame = 0;
     hDecoder->sample_buffer = NULL;
 
-    // Same as (1, 1) after 1024 iterations; otherwise first values does not look random at all.
-    hDecoder->__r1 = 0x2bb431ea;
-    hDecoder->__r2 = 0x206155b7;
+    hDecoder->__r1 = 1;
+    hDecoder->__r2 = 1;
 
     for (i = 0; i < MAX_CHANNELS; i++)
     {
@@ -234,7 +233,6 @@ unsigned char NeAACDecSetConfiguration(NeAACDecHandle hpDecoder,
 }
 
 
-#if 0
 static int latmCheck(latm_header *latm, bitfile *ld)
 {
     uint32_t good=0, bad=0, bits, m;
@@ -258,7 +256,7 @@ static int latmCheck(latm_header *latm, bitfile *ld)
 
     return (good>0);
 }
-#endif
+
 
 long NeAACDecInit(NeAACDecHandle hpDecoder,
                               unsigned char *buffer,
@@ -307,7 +305,7 @@ long NeAACDecInit(NeAACDecHandle hpDecoder,
         } else
 #endif
         /* Check if an ADIF header is present */
-        if ((buffer_size >= 8) && (buffer[0] == 'A') && (buffer[1] == 'D') &&
+        if ((buffer[0] == 'A') && (buffer[1] == 'D') &&
             (buffer[2] == 'I') && (buffer[3] == 'F'))
         {
             hDecoder->adif_header_present = 1;
@@ -614,24 +612,25 @@ static void create_channel_config(NeAACDecStruct *hDecoder, NeAACDecFrameInfo *h
     }
 
     /* check if there is a PCE */
-    /* TODO: why CPE flag is ignored? */
     if (hDecoder->pce_set)
     {
         uint8_t i, chpos = 0;
-        uint8_t chdir, back_center = 0;
+        uint8_t chdir, back_center = 0, total = 0;
 
         hInfo->num_front_channels = hDecoder->pce.num_front_channels;
+        total += hInfo->num_front_channels;
         hInfo->num_side_channels = hDecoder->pce.num_side_channels;
+        total += hInfo->num_side_channels;
         hInfo->num_back_channels = hDecoder->pce.num_back_channels;
+        total += hInfo->num_back_channels;
         hInfo->num_lfe_channels = hDecoder->pce.num_lfe_channels;
+        total += hInfo->num_lfe_channels;
+
         chdir = hInfo->num_front_channels;
         if (chdir & 1)
         {
 #if (defined(PS_DEC) || defined(DRM_PS))
-            if (hInfo->num_front_channels == 1 &&
-                hInfo->num_side_channels == 0 &&
-                hInfo->num_back_channels == 0 &&
-                hInfo->num_lfe_channels == 0)
+            if( total == 1 )
             {
                 /* When PS is enabled output is always stereo */
                 hInfo->channel_position[chpos++] = FRONT_CHANNEL_LEFT;
@@ -641,16 +640,16 @@ static void create_channel_config(NeAACDecStruct *hDecoder, NeAACDecFrameInfo *h
             hInfo->channel_position[chpos++] = FRONT_CHANNEL_CENTER;
             chdir--;
         }
-        for (i = 0; i < chdir; i++)
+        for (i = 0; i < chdir; i += 2)
         {
-            hInfo->channel_position[chpos++] =
-                (i & 1) ? FRONT_CHANNEL_RIGHT : FRONT_CHANNEL_LEFT;
+            hInfo->channel_position[chpos++] = FRONT_CHANNEL_LEFT;
+            hInfo->channel_position[chpos++] = FRONT_CHANNEL_RIGHT;
         }
 
-        for (i = 0; i < hInfo->num_side_channels; i++)
+        for (i = 0; i < hInfo->num_side_channels; i += 2)
         {
-            hInfo->channel_position[chpos++] =
-                (i & 1) ? SIDE_CHANNEL_RIGHT : SIDE_CHANNEL_LEFT;
+            hInfo->channel_position[chpos++] = SIDE_CHANNEL_LEFT;
+            hInfo->channel_position[chpos++] = SIDE_CHANNEL_RIGHT;
         }
 
         chdir = hInfo->num_back_channels;
@@ -659,10 +658,10 @@ static void create_channel_config(NeAACDecStruct *hDecoder, NeAACDecFrameInfo *h
             back_center = 1;
             chdir--;
         }
-        for (i = 0; i < chdir; i++)
+        for (i = 0; i < chdir; i += 2)
         {
-            hInfo->channel_position[chpos++] =
-                (i & 1) ? BACK_CHANNEL_RIGHT : BACK_CHANNEL_LEFT;
+            hInfo->channel_position[chpos++] = BACK_CHANNEL_LEFT;
+            hInfo->channel_position[chpos++] = BACK_CHANNEL_RIGHT;
         }
         if (back_center)
         {
@@ -837,7 +836,7 @@ void* NeAACDecDecode2(NeAACDecHandle hpDecoder,
                                   unsigned long sample_buffer_size)
 {
     NeAACDecStruct* hDecoder = (NeAACDecStruct*)hpDecoder;
-    if ((sample_buffer == NULL) || (*sample_buffer == NULL) || (sample_buffer_size == 0))
+    if ((sample_buffer == NULL) || (sample_buffer_size == 0))
     {
         hInfo->error = 27;
         return NULL;
@@ -846,6 +845,17 @@ void* NeAACDecDecode2(NeAACDecHandle hpDecoder,
     return aac_frame_decode(hDecoder, hInfo, buffer, buffer_size,
         sample_buffer, sample_buffer_size);
 }
+
+#ifdef DRM
+
+#define ERROR_STATE_INIT 6
+
+static void conceal_output(NeAACDecStruct *hDecoder, uint16_t frame_len,
+                           uint8_t out_ch, void *sample_buffer)
+{
+    return;
+}
+#endif
 
 static void* aac_frame_decode(NeAACDecStruct *hDecoder,
                               NeAACDecFrameInfo *hInfo,
@@ -857,14 +867,11 @@ static void* aac_frame_decode(NeAACDecStruct *hDecoder,
     uint16_t i;
     uint8_t channels = 0;
     uint8_t output_channels = 0;
-    bitfile ld;
+    bitfile ld = {0};
     uint32_t bitsconsumed;
     uint16_t frame_len;
     void *sample_buffer;
-#if 0
     uint32_t startbit=0, endbit=0, payload_bits=0;
-#endif
-    uint32_t required_buffer_size=0;
 
 #ifdef PROFILE
     int64_t count = faad_get_ts();
@@ -915,8 +922,6 @@ static void* aac_frame_decode(NeAACDecStruct *hDecoder,
 
     /* initialize the bitstream */
     faad_initbits(&ld, buffer, buffer_size);
-    if (ld.error != 0)
-        return NULL;
 
 #if 0
     {
@@ -984,7 +989,7 @@ static void* aac_frame_decode(NeAACDecStruct *hDecoder,
 
     /* decode the complete bitstream */
 #ifdef DRM
-    if (/*(hDecoder->object_type == 6) ||*/ hDecoder->object_type == DRM_ER_LC)
+    if (/*(hDecoder->object_type == 6) ||*/ (hDecoder->object_type == DRM_ER_LC))
     {
         DRM_aac_scalable_main_element(hDecoder, hInfo, &ld, &hDecoder->pce, hDecoder->drc);
     } else {
@@ -1066,15 +1071,6 @@ static void* aac_frame_decode(NeAACDecStruct *hDecoder,
 #endif
 
     /* Make a channel configuration based on either a PCE or a channelConfiguration */
-    if (!hDecoder->downMatrix && hDecoder->pce_set)
-    {
-        /* In some codepath program_config_element result is ignored. */
-        if (hDecoder->pce.channels > MAX_CHANNELS)
-        {
-            hInfo->error = 22;
-            return NULL;
-        }
-    }
     create_channel_config(hDecoder, hInfo);
 
     /* number of samples in this frame */
@@ -1108,6 +1104,9 @@ static void* aac_frame_decode(NeAACDecStruct *hDecoder,
         return NULL;
     }
 
+    /* allocate the buffer for the final samples */
+    if ((hDecoder->sample_buffer == NULL) ||
+        (hDecoder->alloced_channels != output_channels))
     {
         static const uint8_t str[] = { sizeof(int16_t), sizeof(int32_t), sizeof(int32_t),
             sizeof(float32_t), sizeof(double), sizeof(int16_t), sizeof(int16_t),
@@ -1120,25 +1119,19 @@ static void* aac_frame_decode(NeAACDecStruct *hDecoder,
             stride = 2 * stride;
         }
 #endif
-        required_buffer_size = frame_len*output_channels*stride;
-    }
-
-    /* check if we want to use internal sample_buffer */
-    if (sample_buffer_size == 0)
-    {
-        /* allocate the buffer for the final samples */
-        if (hDecoder->sample_buffer_size != required_buffer_size) 
+        /* check if we want to use internal sample_buffer */
+        if (sample_buffer_size == 0)
         {
             if (hDecoder->sample_buffer)
                 faad_free(hDecoder->sample_buffer);
             hDecoder->sample_buffer = NULL;
-            hDecoder->sample_buffer = faad_malloc(required_buffer_size);
-            hDecoder->sample_buffer_size = required_buffer_size;
+            hDecoder->sample_buffer = faad_malloc(frame_len*output_channels*stride);
+        } else if (sample_buffer_size < frame_len*output_channels*stride) {
+            /* provided sample buffer is not big enough */
+            hInfo->error = 27;
+            return NULL;
         }
-    } else if (sample_buffer_size < required_buffer_size) {
-        /* provided sample buffer is not big enough */
-        hInfo->error = 27;
-        return NULL;
+        hDecoder->alloced_channels = output_channels;
     }
 
     if (sample_buffer_size == 0)
@@ -1226,6 +1219,11 @@ static void* aac_frame_decode(NeAACDecStruct *hDecoder,
     return sample_buffer;
 
 error:
+
+
+#ifdef DRM
+    hDecoder->error_state = ERROR_STATE_INIT;
+#endif
 
     /* reset filterbank state */
     for (i = 0; i < MAX_CHANNELS; i++)

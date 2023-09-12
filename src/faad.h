@@ -29,14 +29,5 @@
 
 #define FAAD2_VERSION "2.10.1"
 
-#include "config.h"
-
-#define MAIN_DEC
-#define LTP_DEC
-#define SBR_DEC
-#define SSR_DEC
-#define LD_DEC
-#define ALLOW_SMALL_FRAMELENGTH
-
 /* Backwards compatible link */
 #include "neaacdec.h"

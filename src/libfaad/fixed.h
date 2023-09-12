@@ -48,9 +48,7 @@ extern "C" {
 /* FRAC is the fractional only part of the fixed point number [0.0..1.0) */
 #define FRAC_SIZE 32 /* frac is a 32 bit integer */
 #define FRAC_BITS 31
-/* Multiplication by power of 2 will be compiled to left-shift */
-#define FRAC_MUL (1u << (FRAC_SIZE - FRAC_BITS))
-#define FRAC_PRECISION ((uint32_t)(1u << FRAC_BITS))
+#define FRAC_PRECISION ((uint32_t)(1 << FRAC_BITS))
 #define FRAC_MAX 0x7FFFFFFF
 
 typedef int32_t real_t;
@@ -65,7 +63,7 @@ typedef int32_t real_t;
 #define Q2_PRECISION (1 << Q2_BITS)
 #define Q2_CONST(A) (((A) >= 0) ? ((real_t)((A)*(Q2_PRECISION)+0.5)) : ((real_t)((A)*(Q2_PRECISION)-0.5)))
 
-#if defined(_WIN32) && !defined(_WIN32_WCE) && !defined(__GNUC__) && !defined(_WIN64)
+#if defined(_WIN32) && !defined(_WIN32_WCE)
 
 /* multiply with real shift */
 static INLINE real_t MUL_R(real_t A, real_t B)
@@ -263,8 +261,8 @@ static INLINE void ComplexMult(real_t *y1, real_t *y2,
          "%0 = (a0 += a1);\n\t"                          \
          : "=d" (__xxo) : "d" (X), "d" (Y) : "A0","A1"); __xxo; })
 #else
-  #define _MulHigh(A,B) (real_t)(((int64_t)(A)*(int64_t)(B)+(1u << (FRAC_SIZE-1))) >> FRAC_SIZE)
-  #define MUL_F(A,B) (real_t)(((int64_t)(A)*(int64_t)(B)+(1u << (FRAC_BITS-1))) >> FRAC_BITS)
+  #define _MulHigh(A,B) (real_t)(((int64_t)(A)*(int64_t)(B)+(1 << (FRAC_SIZE-1))) >> FRAC_SIZE)
+  #define MUL_F(A,B) (real_t)(((int64_t)(A)*(int64_t)(B)+(1 << (FRAC_BITS-1))) >> FRAC_BITS)
 #endif
 #endif
   #define MUL_Q2(A,B) (real_t)(((int64_t)(A)*(int64_t)(B)+(1 << (Q2_BITS-1))) >> Q2_BITS)
@@ -275,17 +273,13 @@ static INLINE void ComplexMult(real_t *y1, real_t *y2,
 static INLINE void ComplexMult(real_t *y1, real_t *y2,
     real_t x1, real_t x2, real_t c1, real_t c2)
 {
-    *y1 = (_MulHigh(x1, c1) + _MulHigh(x2, c2)) * FRAC_MUL;
-    *y2 = (_MulHigh(x2, c1) - _MulHigh(x1, c2)) * FRAC_MUL;
+    *y1 = (_MulHigh(x1, c1) + _MulHigh(x2, c2))<<(FRAC_SIZE-FRAC_BITS);
+    *y2 = (_MulHigh(x2, c1) - _MulHigh(x1, c2))<<(FRAC_SIZE-FRAC_BITS);
 }
 
 #endif
 
-/* Saturated left shift */
-#define SAT_SHIFT_MASK(E) (~0u << (31u - (E)))
-#define SAT_SHIFT(V,E,M) (((((V) >> ((E) + 1)) ^ (V)) & (M)) \
-    ? (((V) < 0) ? (int32_t)0x80000000 : 0x7FFFFFFF) \
-    : ((int32_t)((uint32_t)(V) << (E))))
+
 
 #ifdef __cplusplus
 }

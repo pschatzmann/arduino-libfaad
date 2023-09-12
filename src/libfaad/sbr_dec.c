@@ -34,6 +34,7 @@
 
 #ifdef SBR_DEC
 
+#include <string.h>
 #include <stdlib.h>
 
 #include "syntax.h"
@@ -48,7 +49,6 @@
 static uint8_t sbr_save_prev_data(sbr_info *sbr, uint8_t ch);
 static void sbr_save_matrix(sbr_info *sbr, uint8_t ch);
 
-#define INVALID ((uint8_t)-1)
 
 sbr_info *sbrDecodeInit(uint16_t framelength, uint8_t id_aac,
                         uint32_t sample_rate, uint8_t downSampledSBR
@@ -91,7 +91,7 @@ sbr_info *sbrDecodeInit(uint16_t framelength, uint8_t id_aac,
     sbr->frame_len = framelength;
 
     /* force sbr reset */
-    sbr->bs_start_freq_prev = INVALID;
+    sbr->bs_start_freq_prev = -1;
 
     if (framelength == 960)
     {
@@ -235,7 +235,7 @@ void sbrReset(sbr_info *sbr)
     sbr->bsco = 0;
     sbr->bsco_prev = 0;
     sbr->M_prev = 0;
-    sbr->bs_start_freq_prev = INVALID;
+    sbr->bs_start_freq_prev = -1;
 
     sbr->f_prev[0] = 0;
     sbr->f_prev[1] = 0;
@@ -308,7 +308,6 @@ static uint8_t sbr_process_channel(sbr_info *sbr, real_t *channel_buf, qmf_t X[M
 {
     int16_t k, l;
     uint8_t ret = 0;
-    (void)downSampledSBR;  /* TODO: remove parameter? */
 
 #ifdef SBR_LOW_POWER
     ALIGN real_t deg[64];
@@ -317,7 +316,7 @@ static uint8_t sbr_process_channel(sbr_info *sbr, real_t *channel_buf, qmf_t X[M
 #ifdef DRM
     if (sbr->Is_DRM_SBR)
     {
-        sbr->bsco = (uint8_t)max((int32_t)sbr->maxAACLine*32/(int32_t)sbr->frame_len - (int32_t)sbr->kx, 0);
+        sbr->bsco = max((int32_t)sbr->maxAACLine*32/(int32_t)sbr->frame_len - (int32_t)sbr->kx, 0);
     } else {
 #endif
         sbr->bsco = 0;
@@ -458,7 +457,7 @@ uint8_t sbrDecodeCoupleFrame(sbr_info *sbr, real_t *left_chan, real_t *right_cha
 {
     uint8_t dont_process = 0;
     uint8_t ret = 0;
-    ALIGN qmf_t X[MAX_NTSRHFG][64];
+    ALIGN qmf_t X[MAX_NTSR][64];
 
     if (sbr == NULL)
         return 20;
@@ -474,7 +473,7 @@ uint8_t sbrDecodeCoupleFrame(sbr_info *sbr, real_t *left_chan, real_t *right_cha
 
         /* Re-activate reset for next frame */
         if (sbr->ret && sbr->Reset)
-            sbr->bs_start_freq_prev = INVALID;
+            sbr->bs_start_freq_prev = -1;
     }
 
     if (just_seeked)
@@ -541,7 +540,7 @@ uint8_t sbrDecodeSingleFrame(sbr_info *sbr, real_t *channel,
 {
     uint8_t dont_process = 0;
     uint8_t ret = 0;
-    ALIGN qmf_t X[MAX_NTSRHFG][64];
+    ALIGN qmf_t X[MAX_NTSR][64];
 
     if (sbr == NULL)
         return 20;
@@ -557,7 +556,7 @@ uint8_t sbrDecodeSingleFrame(sbr_info *sbr, real_t *channel,
 
         /* Re-activate reset for next frame */
         if (sbr->ret && sbr->Reset)
-            sbr->bs_start_freq_prev = INVALID;
+            sbr->bs_start_freq_prev = -1;
     }
 
     if (just_seeked)
@@ -610,8 +609,8 @@ uint8_t sbrDecodeSingleFramePS(sbr_info *sbr, real_t *left_channel, real_t *righ
     uint8_t l, k;
     uint8_t dont_process = 0;
     uint8_t ret = 0;
-    ALIGN qmf_t X_left[MAX_NTSRHFG][64] = {{{0}}};
-    ALIGN qmf_t X_right[MAX_NTSRHFG][64] = {{{0}}}; /* must set this to 0 */
+    ALIGN qmf_t X_left[38][64] = {{0}};
+    ALIGN qmf_t X_right[38][64] = {{0}}; /* must set this to 0 */
 
     if (sbr == NULL)
         return 20;
@@ -627,7 +626,7 @@ uint8_t sbrDecodeSingleFramePS(sbr_info *sbr, real_t *left_channel, real_t *righ
 
         /* Re-activate reset for next frame */
         if (sbr->ret && sbr->Reset)
-            sbr->bs_start_freq_prev = INVALID;
+            sbr->bs_start_freq_prev = -1;
     }
 
     if (just_seeked)

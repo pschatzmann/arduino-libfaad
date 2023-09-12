@@ -32,6 +32,7 @@
 #include "structs.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "specrec.h"
 #include "huffman.h"
@@ -84,76 +85,82 @@ typedef struct
     bits_t      bits;
 } codeword_t;
 
-static uint32_t reverse_word(uint32_t v)
+/* rewind and reverse */
+/* 32 bit version */
+static uint32_t rewrev_word(uint32_t v, const uint8_t len)
 {
+    /* 32 bit reverse */
     v = ((v >> S[0]) & B[0]) | ((v << S[0]) & ~B[0]);
     v = ((v >> S[1]) & B[1]) | ((v << S[1]) & ~B[1]);
     v = ((v >> S[2]) & B[2]) | ((v << S[2]) & ~B[2]);
     v = ((v >> S[3]) & B[3]) | ((v << S[3]) & ~B[3]);
     v = ((v >> S[4]) & B[4]) | ((v << S[4]) & ~B[4]);
+
+    /* shift off low bits */
+    v >>= (32 - len);
+
     return v;
 }
+
+/* 64 bit version */
+static void rewrev_lword(uint32_t *hi, uint32_t *lo, const uint8_t len)
+{
+    if (len <= 32) {
+        *hi = 0;
+        *lo = rewrev_word(*lo, len);
+    } else
+    {
+        uint32_t t = *hi, v = *lo;
+
+        /* double 32 bit reverse */
+        v = ((v >> S[0]) & B[0]) | ((v << S[0]) & ~B[0]);
+        t = ((t >> S[0]) & B[0]) | ((t << S[0]) & ~B[0]);
+        v = ((v >> S[1]) & B[1]) | ((v << S[1]) & ~B[1]);
+        t = ((t >> S[1]) & B[1]) | ((t << S[1]) & ~B[1]);
+        v = ((v >> S[2]) & B[2]) | ((v << S[2]) & ~B[2]);
+        t = ((t >> S[2]) & B[2]) | ((t << S[2]) & ~B[2]);
+        v = ((v >> S[3]) & B[3]) | ((v << S[3]) & ~B[3]);
+        t = ((t >> S[3]) & B[3]) | ((t << S[3]) & ~B[3]);
+        v = ((v >> S[4]) & B[4]) | ((v << S[4]) & ~B[4]);
+        t = ((t >> S[4]) & B[4]) | ((t << S[4]) & ~B[4]);
+
+        /* last 32<>32 bit swap is implicit below */
+
+        /* shift off low bits (this is really only one 64 bit shift) */
+        *lo = (t >> (64 - len)) | (v << (len - 32));
+        *hi = v >> (64 - len);
+    }
+}
+
 
 /* bits_t version */
 static void rewrev_bits(bits_t *bits)
 {
     if (bits->len == 0) return;
-    if (bits->len <= 32) {
-        bits->bufb = 0;
-        bits->bufa = reverse_word(bits->bufa) >> (32 - bits->len);
-    } else {
-        /* last 32<>32 bit swap via rename */
-        uint32_t lo = reverse_word(bits->bufb);
-        uint32_t hi = reverse_word(bits->bufa);
-
-        if (bits->len == 64) {
-            bits->bufb = hi;
-            bits->bufa = lo;
-        } else {
-            /* shift off low bits (this is really only one 64 bit shift) */
-            bits->bufb = hi >> (64 - bits->len);
-            bits->bufa = (lo >> (64 - bits->len)) | (hi << (bits->len - 32));
-        }
-    }
+    rewrev_lword(&bits->bufb, &bits->bufa,  bits->len);
 }
 
 
 /* merge bits of a to b */
-/* precondition: a->len + b->len <= 64 */
 static void concat_bits(bits_t *b, bits_t *a)
 {
     uint32_t bl, bh, al, ah;
 
-    /* empty addend */
     if (a->len == 0) return;
-
-    /* addend becomes result */
-    if (b->len == 0)
-    {
-        *b = *a;
-        return;
-    }
 
     al = a->bufa;
     ah = a->bufb;
 
     if (b->len > 32)
     {
-        /* (b->len - 32) is 1..31 */
         /* maskoff superfluous high b bits */
         bl = b->bufa;
-        bh = b->bufb & ((1u << (b->len-32)) - 1);
+        bh = b->bufb & ((1 << (b->len-32)) - 1);
         /* left shift a b->len bits */
         ah = al << (b->len - 32);
         al = 0;
-    } else if (b->len == 32) {
-        bl = b->bufa;
-        bh = 0;
-        ah = al;
-        al = 0;
     } else {
-        /* b->len is 1..31, (32 - b->len) is 1..31 */
-        bl = b->bufa & ((1u << (b->len)) - 1);
+        bl = b->bufa & ((1 << (b->len)) - 1);
         bh = 0;
         ah = (ah << (b->len)) | (al >> (32 - b->len));
         al = al << b->len;
@@ -194,8 +201,8 @@ static void read_segment(bits_t *segment, uint8_t segwidth, bitfile *ld)
         segment->bufa = faad_getbits(ld, 32);
 
     } else {
-        segment->bufb = 0;
         segment->bufa = faad_getbits(ld, segwidth);
+        segment->bufb = 0;
     }
 }
 
@@ -310,18 +317,16 @@ uint8_t reordered_spectral_data(NeAACDecStruct *hDecoder, ic_stream *ics,
                                             rewrev_bits(&segment[numberOfSegments]);
 
                                             numberOfSegments++;
-                                        } else {  // sp_data_len - bitsread < segwidth
+                                        } else {
                                             /* remaining stuff after last segment, we unfortunately couldn't read
                                                this in earlier because it might not fit in 64 bits. since we already
-                                               decoded (and removed) the PCW it is now should fit */
+                                               decoded (and removed) the PCW it is now guaranteed to fit */
                                             if (bitsread < sp_data_len)
                                             {
-                                                const uint8_t additional_bits = (uint8_t)(sp_data_len - bitsread);
+                                                const uint8_t additional_bits = sp_data_len - bitsread;
 
                                                 read_segment(&segment[numberOfSegments], additional_bits, ld);
                                                 segment[numberOfSegments].len += segment[numberOfSegments-1].len;
-                                                if (segment[numberOfSegments].len > 64)
-                                                    return 10;
                                                 rewrev_bits(&segment[numberOfSegments]);
 
                                                 if (segment[numberOfSegments-1].len > 32)
@@ -379,13 +384,7 @@ uint8_t reordered_spectral_data(NeAACDecStruct *hDecoder, ic_stream *ics,
 
                 if (!codeword[codeword_idx].decoded && segment[segment_idx].len > 0)
                 {
-                    uint8_t tmplen = segment[segment_idx].len + codeword[codeword_idx].bits.len;
-
-                    if (tmplen > 64)
-                    {
-                      // Drop bits that do not fit concatenation result.
-                      flushbits_hcr(&codeword[codeword_idx].bits, tmplen - 64);
-                    }
+                    uint8_t tmplen;
 
                     if (codeword[codeword_idx].bits.len != 0)
                         concat_bits(&segment[segment_idx], &codeword[codeword_idx].bits);

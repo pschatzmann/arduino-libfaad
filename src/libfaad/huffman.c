@@ -52,9 +52,7 @@ static uint8_t huffman_binary_quad(uint8_t cb, bitfile *ld, int16_t *sp);
 static uint8_t huffman_binary_quad_sign(uint8_t cb, bitfile *ld, int16_t *sp);
 static uint8_t huffman_binary_pair(uint8_t cb, bitfile *ld, int16_t *sp);
 static uint8_t huffman_binary_pair_sign(uint8_t cb, bitfile *ld, int16_t *sp);
-#if 0
 static int16_t huffman_codebook(uint8_t i);
-#endif
 static void vcb11_check_LAV(uint8_t cb, int16_t *sp);
 
 int8_t huffman_scale_factor(bitfile *ld)
@@ -313,14 +311,12 @@ static uint8_t huffman_binary_pair_sign(uint8_t cb, bitfile *ld, int16_t *sp)
     return err;
 }
 
-#if 0
 static int16_t huffman_codebook(uint8_t i)
 {
     static const uint32_t data = 16428320;
     if (i == 0) return (int16_t)(data >> 16) & 0xFFFF;
     else        return (int16_t)data & 0xFFFF;
 }
-#endif
 
 static void vcb11_check_LAV(uint8_t cb, int16_t *sp)
 {
@@ -363,13 +359,10 @@ uint8_t huffman_spectral_data(uint8_t cb, bitfile *ld, int16_t *sp)
     case 8: /* 2-step method for data pairs */
     case 10:
         return huffman_2step_pair_sign(cb, ld, sp);
-    /* Codebook 12 is disallowed, see `section_data` */
-#if 0
     case 12: {
         uint8_t err = huffman_2step_pair(11, ld, sp);
         sp[0] = huffman_codebook(0); sp[1] = huffman_codebook(1);
         return err; }
-#endif
     case 11:
     {
         uint8_t err = huffman_2step_pair_sign(11, ld, sp);
@@ -402,7 +395,7 @@ uint8_t huffman_spectral_data(uint8_t cb, bitfile *ld, int16_t *sp)
         return 11;
     }
 
-    /* return 0; */
+    return 0;
 }
 
 
@@ -418,7 +411,7 @@ int8_t huffman_spectral_data_2(uint8_t cb, bits_t *ld, int16_t *sp)
     uint32_t cw;
     uint16_t offset = 0;
     uint8_t extra_bits;
-    uint8_t vcb11 = 0;
+    uint8_t i, vcb11 = 0;
 
 
     switch (cb)
@@ -517,7 +510,6 @@ int8_t huffman_spectral_data_2(uint8_t cb, bits_t *ld, int16_t *sp)
 	/* decode sign bits */
     if (unsigned_cb[cb])
     {
-        uint8_t i;
         for(i = 0; i < ((cb < FIRST_PAIR_HCB) ? QUAD_LEN : PAIR_LEN); i++)
         {
             if(sp[i])
@@ -553,9 +545,6 @@ int8_t huffman_spectral_data_2(uint8_t cb, bits_t *ld, int16_t *sp)
                     if (b == 0)
                         break;
                 }
-
-                if (i > 32)
-                    return -1;
 
                 if (getbits_hcr(ld, i, &off))
                     return -1;

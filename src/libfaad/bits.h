@@ -47,9 +47,6 @@ extern "C" {
 
 typedef struct _bitfile
 {
-    const void *buffer;
-    uint32_t *tail;
-    uint32_t *start;
     /* bit input */
     uint32_t bufa;
     uint32_t bufb;
@@ -57,6 +54,9 @@ typedef struct _bitfile
     uint32_t buffer_size; /* size of the buffer in bytes */
     uint32_t bytes_left;
     uint8_t error;
+    uint32_t *tail;
+    uint32_t *start;
+    const void *buffer;
 } bitfile;
 
 
@@ -74,17 +74,13 @@ static uint32_t const bitmask[] = {
 
 void faad_initbits(bitfile *ld, const void *buffer, const uint32_t buffer_size);
 void faad_endbits(bitfile *ld);
-#if 0
 void faad_initbits_rev(bitfile *ld, void *buffer,
                        uint32_t bits_in_buffer);
-#endif
 uint8_t faad_byte_align(bitfile *ld);
 uint32_t faad_get_processed_bits(bitfile *ld);
 void faad_flushbits_ex(bitfile *ld, uint32_t bits);
-#ifdef DRM
 void faad_rewindbits(bitfile *ld);
-#endif
-void faad_resetbits(bitfile *ld, uint32_t bits);
+void faad_resetbits(bitfile *ld, int bits);
 uint8_t *faad_getbitbuffer(bitfile *ld, uint32_t bits
                        DEBUGDEC);
 #ifdef DRM
@@ -95,8 +91,53 @@ uint32_t faad_origbitbuffer_size(bitfile *ld);
 /* circumvent memory alignment errors on ARM */
 static INLINE uint32_t getdword(void *mem)
 {
-    uint8_t* m8 = (uint8_t*)mem;
-    return (uint32_t)m8[3] | ((uint32_t)m8[2] << 8) | ((uint32_t)m8[1] << 16) | ((uint32_t)m8[0] << 24);
+    uint32_t tmp;
+#ifndef ARCH_IS_BIG_ENDIAN
+    ((uint8_t*)&tmp)[0] = ((uint8_t*)mem)[3];
+    ((uint8_t*)&tmp)[1] = ((uint8_t*)mem)[2];
+    ((uint8_t*)&tmp)[2] = ((uint8_t*)mem)[1];
+    ((uint8_t*)&tmp)[3] = ((uint8_t*)mem)[0];
+#else
+    ((uint8_t*)&tmp)[0] = ((uint8_t*)mem)[0];
+    ((uint8_t*)&tmp)[1] = ((uint8_t*)mem)[1];
+    ((uint8_t*)&tmp)[2] = ((uint8_t*)mem)[2];
+    ((uint8_t*)&tmp)[3] = ((uint8_t*)mem)[3];
+#endif
+
+    return tmp;
+}
+
+/* reads only n bytes from the stream instead of the standard 4 */
+static /*INLINE*/ uint32_t getdword_n(void *mem, int n)
+{
+    uint32_t tmp = 0;
+#ifndef ARCH_IS_BIG_ENDIAN
+    switch (n)
+    {
+    case 3:
+        ((uint8_t*)&tmp)[1] = ((uint8_t*)mem)[2];
+    case 2:
+        ((uint8_t*)&tmp)[2] = ((uint8_t*)mem)[1];
+    case 1:
+        ((uint8_t*)&tmp)[3] = ((uint8_t*)mem)[0];
+    default:
+        break;
+    }
+#else
+    switch (n)
+    {
+    case 3:
+        ((uint8_t*)&tmp)[2] = ((uint8_t*)mem)[2];
+    case 2:
+        ((uint8_t*)&tmp)[1] = ((uint8_t*)mem)[1];
+    case 1:
+        ((uint8_t*)&tmp)[0] = ((uint8_t*)mem)[0];
+    default:
+        break;
+    }
+#endif
+
+    return tmp;
 }
 
 static INLINE uint32_t faad_showbits(bitfile *ld, uint32_t bits)
@@ -109,7 +150,7 @@ static INLINE uint32_t faad_showbits(bitfile *ld, uint32_t bits)
 
     bits -= ld->bits_left;
     //return ((ld->bufa & bitmask[ld->bits_left]) << bits) | (ld->bufb >> (32 - bits));
-    return ((ld->bufa & ((1u<<ld->bits_left)-1)) << bits) | (ld->bufb >> (32 - bits));
+    return ((ld->bufa & ((1<<ld->bits_left)-1)) << bits) | (ld->bufb >> (32 - bits));
 }
 
 static INLINE void faad_flushbits(bitfile *ld, uint32_t bits)
@@ -166,7 +207,6 @@ static INLINE uint8_t faad_get1bit(bitfile *ld DEBUGDEC)
     return r;
 }
 
-#if 0
 /* reversed bitreading routines */
 static INLINE uint32_t faad_showbits_rev(bitfile *ld, uint32_t bits)
 {
@@ -177,20 +217,20 @@ static INLINE uint32_t faad_showbits_rev(bitfile *ld, uint32_t bits)
     {
         for (i = 0; i < bits; i++)
         {
-            if (ld->bufa & (1u << (i + (32 - ld->bits_left))))
-                B |= (1u << (bits - i - 1));
+            if (ld->bufa & (1 << (i + (32 - ld->bits_left))))
+                B |= (1 << (bits - i - 1));
         }
         return B;
     } else {
         for (i = 0; i < ld->bits_left; i++)
         {
-            if (ld->bufa & (1u << (i + (32 - ld->bits_left))))
-                B |= (1u << (bits - i - 1));
+            if (ld->bufa & (1 << (i + (32 - ld->bits_left))))
+                B |= (1 << (bits - i - 1));
         }
         for (i = 0; i < bits - ld->bits_left; i++)
         {
-            if (ld->bufb & (1u << (i + (32-ld->bits_left))))
-                B |= (1u << (bits - ld->bits_left - i - 1));
+            if (ld->bufb & (1 << (i + (32-ld->bits_left))))
+                B |= (1 << (bits - ld->bits_left - i - 1));
         }
         return B;
     }
@@ -244,7 +284,6 @@ static /*INLINE*/ uint32_t faad_getbits_rev(bitfile *ld, uint32_t n
 
     return ret;
 }
-#endif
 
 #ifdef DRM
 /* CRC lookup table for G8 polynome in DRM standard */
@@ -283,7 +322,7 @@ static const uint8_t crc_table_G8[256] = {
     0x97, 0x8a, 0xad, 0xb0, 0xe3, 0xfe, 0xd9, 0xc4,
 };
 
-static INLINE uint8_t faad_check_CRC(bitfile *ld, uint16_t len)
+static uint8_t faad_check_CRC(bitfile *ld, uint16_t len)
 {
     int bytes, rem;
     unsigned int CRC;
@@ -319,7 +358,6 @@ static INLINE uint8_t faad_check_CRC(bitfile *ld, uint16_t len)
     }
 }
 
-#ifdef SBR_DEC
 static uint8_t tabFlipbits[256] = {
     0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240,
     8,136,72,200,40,168,104,232,24,152,88,216,56,184,120,248,
@@ -338,11 +376,6 @@ static uint8_t tabFlipbits[256] = {
     7,135,71,199,39,167,103,231,23,151,87,215,55,183,119,247,
     15,143,79,207,47,175,111,239,31,159,95,223,63,191,127,255
 };
-static INLINE uint8_t reverse_byte(uint8_t b)
-{
-    return tabFlipbits[b];
-}
-#endif
 #endif
 
 #ifdef ERROR_RESILIENCE
@@ -357,29 +390,26 @@ typedef struct
     int8_t len;
 } bits_t;
 
-/* PRECONDITION: bits <= 32 */
+
 static INLINE uint32_t showbits_hcr(bits_t *ld, uint8_t bits)
 {
-    uint32_t mask;
-    int8_t tail;
     if (bits == 0) return 0;
-    if (ld->len == 0) return 0;
-    tail = ld->len - bits;
-    mask = 0xFFFFFFFF >> (32 - bits);
     if (ld->len <= 32)
     {
-        /* huffman_spectral_data_2 might request more than available (tail < 0),
-           pad with zeroes then. */
-        if (tail >= 0)
-            return (ld->bufa >> tail) & mask; /* tail is 0..31 */
+        /* huffman_spectral_data_2 needs to read more than may be available, bits maybe
+           > ld->len, deliver 0 than */
+        if (ld->len >= bits)
+            return ((ld->bufa >> (ld->len - bits)) & (0xFFFFFFFF >> (32 - bits)));
         else
-            return (ld->bufa << -tail) & mask; /* -tail is 1..31 */
+            return ((ld->bufa << (bits - ld->len)) & (0xFFFFFFFF >> (32 - bits)));
     } else {
-        /* tail is 1..63 */
-        if (tail < 32)
-            return ((ld->bufb << (32 - tail)) | (ld->bufa >> tail)) & mask;
-        else
-            return (ld->bufb >> (tail - 32)) & mask;
+        if ((ld->len - bits) < 32)
+        {
+            return ( (ld->bufb & (0xFFFFFFFF >> (64 - ld->len))) << (bits - ld->len + 32)) |
+                (ld->bufa >> (ld->len - bits));
+        } else {
+            return ((ld->bufb >> (ld->len - bits - 32)) & (0xFFFFFFFF >> (32 - bits)));
+        }
     }
 }
 

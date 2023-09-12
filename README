@@ -52,6 +52,8 @@ DIRECTORY STRUCTURE
 
 faad2 - top level directory.
 
+   aacDECdrop - windows decoder/player with drag'n'drop functionality.
+
    docs - API documentation.
 
    frontend - command line frontend to the FAAD2 library, also supports
@@ -63,4 +65,16 @@ faad2 - top level directory.
 
       codebook - Huffman codebooks.
 
+   plugins - plugins for all kinds of pograms.
+
+      mpeg4ip - plugin for the mpeg4ip player.
+
+      QCD - Quintessential player AAC plugin.
+
+      QCDMp4 - Quintessential player MP4 plugin.
+
+      xmms - xmms AAC plugin.
+
    project/msvc - Visual Studio 2017 project files.
+
+   utils/win32 - generate "win32_ver.h" from "configure.h".

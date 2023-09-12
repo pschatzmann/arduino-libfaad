@@ -160,8 +160,8 @@ typedef struct
     uint8_t copyright_identification_start;
     uint16_t aac_frame_length;
     uint16_t adts_buffer_fullness;
-    uint16_t crc_check;
     uint8_t no_raw_data_blocks_in_frame;
+    uint16_t crc_check;
 
     /* control param */
     uint8_t old_format;
@@ -172,11 +172,11 @@ typedef struct
     uint8_t copyright_id_present;
     int8_t copyright_id[10];
     uint8_t original_copy;
-    uint32_t bitrate;
-    uint32_t adif_buffer_fullness;
-    uint8_t num_program_config_elements;
     uint8_t home;
     uint8_t bitstream_type;
+    uint32_t bitrate;
+    uint8_t num_program_config_elements;
+    uint32_t adif_buffer_fullness;
 
     /* maximum of 16 PCEs */
     program_config pce[16];
@@ -240,7 +240,6 @@ typedef struct
 typedef struct
 {
     uint8_t max_sfb;
-    uint8_t global_gain;
 
     uint8_t num_swb;
     uint8_t num_window_groups;
@@ -259,7 +258,8 @@ typedef struct
     uint8_t sfb_cb[8][8*15];
     uint8_t num_sec[8]; /* number of sections in a group */
 
-    int16_t scale_factors[8][51]; /* [0..255], except for noise and intensity */
+    uint8_t global_gain;
+    int16_t scale_factors[8][51]; /* [0..255] */
 
     uint8_t ms_mask_present;
     uint8_t ms_used[MAX_WINDOW_GROUPS][MAX_SFB];
@@ -291,12 +291,12 @@ typedef struct
     uint8_t length_of_longest_codeword;
     /* ER RLVC data */
     uint8_t sf_concealment;
+    uint8_t rev_global_gain;
     uint16_t length_of_rvlc_sf;
     uint16_t dpcm_noise_nrg;
     uint8_t sf_escapes_present;
     uint8_t length_of_rvlc_escapes;
     uint16_t dpcm_noise_last_position;
-    uint8_t rev_global_gain;
 #endif
 } ic_stream; /* individual channel stream */
 
@@ -337,17 +337,15 @@ typedef struct
     uint8_t sf_index;
     uint8_t object_type;
     uint8_t channelConfiguration;
-    uint8_t postSeekResetFlag;
 #ifdef ERROR_RESILIENCE
     uint8_t aacSectionDataResilienceFlag;
     uint8_t aacScalefactorDataResilienceFlag;
     uint8_t aacSpectralDataResilienceFlag;
 #endif
     uint16_t frameLength;
+    uint8_t postSeekResetFlag;
 
     uint32_t frame;
-
-    uint32_t sample_buffer_size;
 
     uint8_t downMatrix;
     uint8_t upMatrix;
@@ -366,11 +364,10 @@ typedef struct
        determines whether the data needed for the element is allocated or not
     */
     uint8_t element_alloced[MAX_SYNTAX_ELEMENTS];
-    /* sample_buffer_size:
-       (internal) output dara buffer size
+    /* alloced_channels:
+       determines the number of channels where output data is allocated for
     */
-
-	latm_header latm_config;
+    uint8_t alloced_channels;
 
     /* output data buffer */
     void *sample_buffer;
@@ -386,7 +383,17 @@ typedef struct
     real_t *fb_intermed[MAX_CHANNELS];
 
 #ifdef SBR_DEC
+    int8_t sbr_present_flag;
+    int8_t forceUpSampling;
+    int8_t downSampledSBR;
+    /* determines whether SBR data is allocated for the gives element */
+    uint8_t sbr_alloced[MAX_SYNTAX_ELEMENTS];
+
     sbr_info *sbr[MAX_SYNTAX_ELEMENTS];
+#endif
+#if (defined(PS_DEC) || defined(DRM_PS))
+    uint8_t ps_used[MAX_SYNTAX_ELEMENTS];
+    uint8_t ps_used_global;
 #endif
 
 #ifdef SSR_DEC
@@ -402,22 +409,13 @@ typedef struct
     int16_t *lt_pred_stat[MAX_CHANNELS];
 #endif
 
+#ifdef DRM
+    uint8_t error_state;
+#endif
+
     /* RNG states */
     uint32_t __r1;
     uint32_t __r2;
-
-#ifdef SBR_DEC
-    int8_t sbr_present_flag;
-    int8_t forceUpSampling;
-    int8_t downSampledSBR;
-    /* determines whether SBR data is allocated for the gives element */
-    uint8_t sbr_alloced[MAX_SYNTAX_ELEMENTS];
-#endif
-
-#if (defined(PS_DEC) || defined(DRM_PS))
-    uint8_t ps_used[MAX_SYNTAX_ELEMENTS];
-    uint8_t ps_used_global;
-#endif
 
     /* Program Config Element */
     uint8_t pce_set;
@@ -435,6 +433,7 @@ typedef struct
     int64_t scalefac_cycles;
     int64_t requant_cycles;
 #endif
+	latm_header latm_config;
 	const unsigned char *cmes;
 } NeAACDecStruct;
 

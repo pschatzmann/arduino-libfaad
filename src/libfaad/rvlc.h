@@ -37,8 +37,8 @@ extern "C" {
 
 typedef struct
 {
-    int16_t index;
-    uint16_t len;
+    int8_t index;
+    uint8_t len;
     uint32_t cw;
 } rvlc_huff_table;
 
