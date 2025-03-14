@@ -85,7 +85,7 @@ extern "C" {
 /* Allow decoding of MAIN profile AAC */
 #define MAIN_DEC
 /* Allow decoding of SSR profile AAC */
-#define SSR_DEC
+//#define SSR_DEC
 /* Allow decoding of LTP profile AAC */
 #define LTP_DEC
 /* Allow decoding of LD profile AAC */
@@ -374,7 +374,6 @@ char *strchr(), *strrchr();
 
 #ifdef HAVE_SINF
 #  define sin sinf
-#error
 #endif
 #ifdef HAVE_COSF
 #  define cos cosf
