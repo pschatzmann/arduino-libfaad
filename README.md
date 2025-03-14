@@ -52,7 +52,7 @@ This project is part of my [Arduino Audio Tools](https://github.com/pschatzmann/
 
 ### Memory Requirements
 
-I was struggling quite a bit with the memory requirements and I could only make it work on an ESP32 with a stack of 40k and by using PSRAM. So to fulfill the stack requirement we need to run the decoder in a separate freertos task.
+I was struggling quite a bit with the memory requirements and I could only make it work on an ESP32 with a __stack of 60k__ and by using PSRAM. So to fulfill the stack requirement we need to run the decoder in a separate freertos task.
 
 Further details can be found in my [related blog](https://www.pschatzmann.ch/home/2023/09/12/arduino-audio-tools-faat-aac-decoder/).
 
