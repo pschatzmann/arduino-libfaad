@@ -30,6 +30,7 @@
 
 #ifndef __SBR_DEC_H__
 #define __SBR_DEC_H__
+#include "common.h"
 
 #ifdef __cplusplus
 extern "C" {

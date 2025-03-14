@@ -30,6 +30,7 @@
 
 #ifndef IQ_TABLE_H__
 #define IQ_TABLE_H__
+#include "common.h"
 
 #ifdef __cplusplus
 extern "C" {

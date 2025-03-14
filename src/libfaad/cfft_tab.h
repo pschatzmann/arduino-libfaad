@@ -30,6 +30,7 @@
 
 #ifndef __CFFT_TAB_H__
 #define __CFFT_TAB_H__
+#include "common.h"
 
 #ifdef __cplusplus
 extern "C" {

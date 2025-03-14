@@ -36,6 +36,10 @@
 #include <stdlib.h>
 #include "syntax.h"
 
+#ifdef ARDUINO
+#  include "Arduino.h" // for ps_malloc
+#endif
+
 
 /* Returns the sample rate index based on the samplerate */
 uint8_t get_sr_index(const uint32_t samplerate)
@@ -177,6 +181,13 @@ void *faad_malloc(size_t size)
 #if 0 // defined(_WIN32) && !defined(_WIN32_WCE)
     return _aligned_malloc(size, 16);
 #else   // #ifdef 0
+
+#if defined(ESP32) && defined(ARDUINO)
+    void* result = NULL;
+    result = ps_malloc(size);
+    if (result) return result;
+#endif
+
     return malloc(size);
 #endif  // #ifdef 0
 }

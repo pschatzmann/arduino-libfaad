@@ -71,8 +71,8 @@ static void create_channel_config(NeAACDecStruct *hDecoder,
 int NeAACDecGetVersion(const char **faad_id_string,
                                    const char **faad_copyright_string)
 {
-    static char *libfaadName = PACKAGE_VERSION;
-    static char *libCopyright =
+    static const char *libfaadName = PACKAGE_VERSION;
+    static const char *libCopyright =
         " Copyright 2002-2004: Ahead Software AG\n"
 	" http://www.audiocoding.com\n"
 	" bug tracking: https://sourceforge.net/p/faac/bugs/\n";
@@ -228,7 +228,6 @@ unsigned char NeAACDecSetConfiguration(NeAACDecHandle hpDecoder,
         /* OK */
         return 1;
     }
-
     return 0;
 }
 

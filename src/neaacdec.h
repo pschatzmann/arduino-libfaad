@@ -30,6 +30,7 @@
 
 #ifndef __NEAACDEC_H__
 #define __NEAACDEC_H__
+#include "common.h"
 
 #ifdef __cplusplus
 extern "C" {
