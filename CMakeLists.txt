@@ -15,4 +15,4 @@ add_library (libfaad ${SRC_LIST_C})
 target_compile_definitions(libfaad PUBLIC -DHAVE_CONFIG_H)
 
 # define location for header files
-target_include_directories(libfaad PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src )
+target_include_directories(libfaad PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/libfaad )
