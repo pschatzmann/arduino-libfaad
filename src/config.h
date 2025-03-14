@@ -14,7 +14,8 @@
 #define HAVE_CEILF 1
 #define HAVE_SQRTF 1
 #define HAS_LRINTF 1
-#define FIXED_POINT 1
+
+//#define FIXED_POINT 1
 
 #define PACKAGE_VERSION "Arduino"
 
