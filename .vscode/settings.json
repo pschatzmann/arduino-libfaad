@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "common.h": "c"
-    }
+    },
+    "idf.pythonInstallPath": "/usr/bin/python3"
 }
