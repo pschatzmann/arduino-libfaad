@@ -36,8 +36,8 @@
 #include <stdlib.h>
 #include "syntax.h"
 
-#ifdef ARDUINO
-#  include "Arduino.h" // for ps_malloc
+#if defined(ESP_PLATFORM)
+#  include "esp_heap_caps.h" // for heap_caps_malloc
 #endif
 
 
@@ -182,9 +182,10 @@ void *faad_malloc(size_t size)
     return _aligned_malloc(size, 16);
 #else   // #ifdef 0
 
-#if defined(ESP32) && defined(ARDUINO)
-    void* result = NULL;
-    result = ps_malloc(size);
+#if defined(ESP_PLATFORM)
+    /* ESP_PLATFORM is defined by ESP-IDF and by Arduino-ESP32 (which is
+     * built on top of ESP-IDF), so this covers both environments. */
+    void* result = heap_caps_malloc(size, MALLOC_CAP_SPIRAM);
     if (result) return result;
 #endif
 
