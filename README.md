@@ -1,5 +1,8 @@
 # Freeware Advanced Audio (AAC) Decoder including SBR decoding
 
+[![Arduino Library](https://img.shields.io/badge/Arduino-Library-blue.svg)](https://www.arduino.cc/reference/en/libraries/)
+[![IDF Component](https://img.shields.io/badge/IDF-Component-blue.svg)](https://github.com/pschatzmann/arduino-libfaad)
+
 FAAD2 is a HE, LC, MAIN and LTP profile, MPEG2 and MPEG-4 AAC decoder.
 FAAD2 includes code for SBR (HE AAC) decoding.
 FAAD2 is licensed under the GPL.

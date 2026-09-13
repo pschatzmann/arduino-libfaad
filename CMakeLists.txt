@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 
+if (DEFINED ESP_PLATFORM)
+  # idf component
+  idf_component_register(
+      SRC_DIRS src src/libfaad
+      INCLUDE_DIRS src src/libfaad
+  )
+
+  target_compile_options(${COMPONENT_LIB} PUBLIC -Wno-error -Wno-stringop-overflow -DHAVE_CONFIG_H)
+
+else()
+
 # set the project name
 project(libfaad)
 
@@ -17,3 +28,5 @@ target_compile_definitions(libfaad PUBLIC -DHAVE_CONFIG_H)
 
 # define location for header files
 target_include_directories(libfaad PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/libfaad )
+
+endif()
